@@ -152,6 +152,7 @@ public sealed class AvoidThemGame : MonoBehaviour
         if (TryGetBackgroundTexture(out var backgroundTexture))
         {
             floorMaterial.color = Color.white;
+            backgroundTexture.wrapMode = TextureWrapMode.Repeat;
             floorMaterial.mainTexture = backgroundTexture;
             floorMaterial.mainTextureScale = new Vector2(backgroundTextureTiling, backgroundTextureTiling);
             return;
