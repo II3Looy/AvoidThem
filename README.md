@@ -63,6 +63,27 @@ Playable prototype.
   - `Library/`, `Temp/`, `Logs/`, `UserSettings/`, `Obj/`, `Build/`, `Builds/`
   - IDE/generated files (`*.csproj`, `*.sln`, `*.slnx`, `.vs/`, `.vscode/`, `.idea/`)
 
+## Git LFS
+
+This repo uses Git LFS for high-resolution background images.
+
+- Tracked path patterns:
+  - `Assets/Art/Backgrounds/**/*.png`
+  - `Assets/Art/Backgrounds/**/*.jpg`
+  - `Assets/Art/Backgrounds/**/*.jpeg`
+  - `Assets/Art/Backgrounds/**/*.webp`
+  - `Assets/Art/Backgrounds/**/*.tga`
+  - `Assets/Art/Backgrounds/**/*.tif`
+  - `Assets/Art/Backgrounds/**/*.tiff`
+  - `Assets/Art/Backgrounds/**/*.psd`
+  - `Assets/Art/Backgrounds/**/*.exr`
+  - `Assets/Art/Backgrounds/**/*.hdr`
+
+For each collaborator machine:
+
+1. Install Git LFS.
+2. Run `git lfs install` once.
+
 ## Roadmap
 
 - Add audio feedback and simple VFX.
