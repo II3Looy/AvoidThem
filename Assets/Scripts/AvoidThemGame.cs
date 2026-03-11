@@ -33,8 +33,11 @@ public sealed class AvoidThemGame : MonoBehaviour
     [SerializeField] private string backgroundTextureName = "lava";
     [SerializeField] private float backgroundTextureTiling = 2f;
     [SerializeField] private Color floorFallbackColor = new Color(0.12f, 0.16f, 0.2f);
+    [SerializeField] private string enemyTextureFolderName = "Enemies";
+    [SerializeField] private Color hazardFallbackColor = new Color(1f, 0.31f, 0.2f);
 
     private readonly List<Rigidbody> hazards = new List<Rigidbody>();
+    private readonly List<Texture2D> enemyTextures = new List<Texture2D>();
     private Camera gameCamera;
     private Transform cursorTransform;
     private PhysicsMaterial bounceMaterial;
@@ -53,6 +56,7 @@ public sealed class AvoidThemGame : MonoBehaviour
     {
         cursorPlane = new Plane(Vector3.up, Vector3.zero);
         uiFont = ResolveFont();
+        LoadEnemyTextures();
         ConfigureCamera();
         BuildArena();
         BuildCursor();
@@ -191,6 +195,71 @@ public sealed class AvoidThemGame : MonoBehaviour
 #endif
 
         return false;
+    }
+
+    private void LoadEnemyTextures()
+    {
+        enemyTextures.Clear();
+        LoadEnemyTexturesFromFolder(enemyTextureFolderName);
+
+        if (enemyTextureFolderName != "Enemy")
+        {
+            LoadEnemyTexturesFromFolder("Enemy");
+        }
+
+        if (enemyTextureFolderName != "Enemies")
+        {
+            LoadEnemyTexturesFromFolder("Enemies");
+        }
+    }
+
+    private void LoadEnemyTexturesFromFolder(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            return;
+        }
+
+        AddUniqueTextures(Resources.LoadAll<Texture2D>($"Art/{folderName}"));
+
+#if UNITY_EDITOR
+        var textureGuids = UnityEditor.AssetDatabase.FindAssets("t:Texture2D", new[] { $"Assets/Art/{folderName}" });
+        for (var i = 0; i < textureGuids.Length; i++)
+        {
+            var texturePath = UnityEditor.AssetDatabase.GUIDToAssetPath(textureGuids[i]);
+            var texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            if (texture != null)
+            {
+                AddUniqueTexture(texture);
+            }
+        }
+#endif
+    }
+
+    private void AddUniqueTextures(Texture2D[] textures)
+    {
+        for (var i = 0; i < textures.Length; i++)
+        {
+            AddUniqueTexture(textures[i]);
+        }
+    }
+
+    private void AddUniqueTexture(Texture2D texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < enemyTextures.Count; i++)
+        {
+            if (enemyTextures[i] == texture)
+            {
+                return;
+            }
+        }
+
+        enemyTextures.Add(texture);
     }
 
     private void CreateBoundaryWall(string wallName, Vector3 position, Vector3 scale)
@@ -512,7 +581,7 @@ public sealed class AvoidThemGame : MonoBehaviour
         hazardObject.name = "Hazard";
         hazardObject.transform.position = position;
         hazardObject.transform.localScale = Vector3.one * (hazardRadius * 2f);
-        hazardObject.GetComponent<Renderer>().material.color = new Color(1f, 0.31f, 0.2f);
+        ApplyHazardVisuals(hazardObject.GetComponent<Renderer>());
 
         var collider = hazardObject.GetComponent<SphereCollider>();
         collider.sharedMaterial = bounceMaterial;
@@ -529,6 +598,20 @@ public sealed class AvoidThemGame : MonoBehaviour
         rb.linearVelocity = direction.normalized * Mathf.Max(2.5f, speed);
 
         hazards.Add(rb);
+    }
+
+    private void ApplyHazardVisuals(Renderer hazardRenderer)
+    {
+        var hazardMaterial = hazardRenderer.material;
+        if (enemyTextures.Count == 0)
+        {
+            hazardMaterial.color = hazardFallbackColor;
+            return;
+        }
+
+        var texture = enemyTextures[Random.Range(0, enemyTextures.Count)];
+        hazardMaterial.color = Color.white;
+        hazardMaterial.mainTexture = texture;
     }
 
     private void PurgeDestroyedHazards()
