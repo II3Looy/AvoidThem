@@ -1,0 +1,115 @@
+name: Unity CI + itch.io Deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  ITCH_TARGET: hammadojh/avoidthem
+  ITCH_CHANNEL: web
+
+jobs:
+  test:
+    name: Run EditMode tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Cache Unity Library
+        uses: actions/cache@v5
+        with:
+          path: Library
+          key: Library-Tests-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-Tests-
+
+      - name: Run EditMode tests
+        uses: game-ci/unity-test-runner@v4.3.1
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
+          testMode: EditMode
+
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Test-Results-EditMode
+          path: artifacts
+          if-no-files-found: ignore
+
+  build:
+    name: Build WebGL
+    if: github.event_name != 'pull_request' || !github.event.pull_request.head.repo.fork
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Cache Unity Library
+        uses: actions/cache@v5
+        with:
+          path: Library
+          key: Library-WebGL-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          restore-keys: |
+            Library-WebGL-
+
+      - name: Build WebGL
+        uses: game-ci/unity-builder@v4.8.1
+        env:
+          UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+        with:
+          targetPlatform: WebGL
+
+      - name: Upload WebGL artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: Build-WebGL
+          path: build/WebGL
+          if-no-files-found: error
+
+  deploy_itch:
+    name: Deploy to itch.io
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [test, build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download WebGL artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: Build-WebGL
+          path: build/WebGL
+
+      - name: Install butler
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/linux-amd64/LATEST/archive/default
+          unzip butler.zip -d butler
+          chmod +x butler/butler
+
+      - name: Push build to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_API_KEY }}
+        run: |
+          butler/butler push build/WebGL "${ITCH_TARGET}:${ITCH_CHANNEL}" --userversion "${GITHUB_SHA::7}"
