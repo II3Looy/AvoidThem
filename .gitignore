@@ -43,3 +43,5 @@ crashlytics-build.properties
 
 # Optional local package refs
 # Packages/com.company.package
+Packages/manifest.json
+ProjectSettings/ProjectVersion.txt
