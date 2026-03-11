@@ -1,10 +1,10 @@
 # AvoidThem
 
-A Unity 6 project scaffold for the game concept "AvoidThem".
+A simple top-down survival game in Unity where you dodge bouncing hazards with your cursor.
 
 ## Status
 
-Early setup / template stage. Core gameplay systems are not implemented yet.
+Playable prototype.
 
 ## Requirements
 
@@ -19,15 +19,31 @@ Early setup / template stage. Core gameplay systems are not implemented yet.
 3. Open the scene `Assets/Scenes/SampleScene.unity`.
 4. Press Play in the Unity Editor.
 
+## Gameplay
+
+- View: top-down camera over a square arena.
+- Player: your mouse cursor is represented by a cyan circle.
+- Hazards: red spheres spawn from random arena edges and bounce off walls.
+- Lose condition: touching any hazard ends the run.
+- Scoring: score is survival time in seconds.
+- UI: start overlay and game-over overlay with restart prompt.
+
+## Controls
+
+- Mouse move: move player circle
+- `Space` or left click: start game
+- `R`, `Space`, or left click (after death): restart
+
 ## Project Structure
 
 - `Assets/`: Game content, scenes, scripts, settings assets, and `.meta` files.
 - `Packages/`: Unity package manifest and lock file.
 - `ProjectSettings/`: Project-wide Unity configuration.
 
-## Current Input Setup
+## Implementation Notes
 
-Input actions are defined in `Assets/InputSystem_Actions.inputactions`. The action map exists, but gameplay bindings are not fully wired to custom game logic yet.
+- Main gameplay bootstrap is in `Assets/Scripts/AvoidThemGame.cs`.
+- The game is initialized at runtime, so it works in the existing sample scene without manual scene wiring.
 
 ## Build
 
@@ -49,10 +65,10 @@ Input actions are defined in `Assets/InputSystem_Actions.inputactions`. The acti
 
 ## Roadmap
 
-- Implement player controller and camera behavior.
-- Add enemy/spawn/avoidance gameplay loop.
-- Add game states (start, lose, restart) and UI.
-- Add score/progression and balancing.
+- Add audio feedback and simple VFX.
+- Add difficulty tuning presets.
+- Add pause/settings menu.
+- Add a persistent high-score save.
 
 ## License
 
