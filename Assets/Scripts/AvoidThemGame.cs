@@ -29,7 +29,15 @@ public sealed class AvoidThemGame : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
+    [Header("Visuals")]
+    [SerializeField] private string backgroundTextureName = "lava";
+    [SerializeField] private float backgroundTextureTiling = 2f;
+    [SerializeField] private Color floorFallbackColor = new Color(0.12f, 0.16f, 0.2f);
+    [SerializeField] private string enemyTextureFolderName = "Enemies";
+    [SerializeField] private Color hazardFallbackColor = new Color(1f, 0.31f, 0.2f);
+
     private readonly List<Rigidbody> hazards = new List<Rigidbody>();
+    private readonly List<Texture2D> enemyTextures = new List<Texture2D>();
     private Camera gameCamera;
     private Transform cursorTransform;
     private PhysicsMaterial bounceMaterial;
@@ -43,11 +51,14 @@ public sealed class AvoidThemGame : MonoBehaviour
     private float spawnTimer;
     private Plane cursorPlane;
     private Font uiFont;
+    private Vector2 lastPointerPosition;
 
     private void Awake()
     {
         cursorPlane = new Plane(Vector3.up, Vector3.zero);
         uiFont = ResolveFont();
+        lastPointerPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+        LoadEnemyTextures();
         ConfigureCamera();
         BuildArena();
         BuildCursor();
@@ -121,7 +132,7 @@ public sealed class AvoidThemGame : MonoBehaviour
         floor.transform.position = Vector3.zero;
         floor.transform.localScale = new Vector3(arenaHalfSize / 5f, 1f, arenaHalfSize / 5f);
         var floorRenderer = floor.GetComponent<Renderer>();
-        floorRenderer.material.color = new Color(0.12f, 0.16f, 0.2f);
+        ApplyFloorVisuals(floorRenderer);
         var floorCollider = floor.GetComponent<Collider>();
         if (floorCollider != null)
         {
@@ -139,6 +150,118 @@ public sealed class AvoidThemGame : MonoBehaviour
             directionalLight.intensity = 1.25f;
             directionalLight.transform.rotation = Quaternion.Euler(60f, -30f, 0f);
         }
+    }
+
+    private void ApplyFloorVisuals(Renderer floorRenderer)
+    {
+        var floorMaterial = floorRenderer.material;
+        if (TryGetBackgroundTexture(out var backgroundTexture))
+        {
+            floorMaterial.color = Color.white;
+            backgroundTexture.wrapMode = TextureWrapMode.Repeat;
+            floorMaterial.mainTexture = backgroundTexture;
+            floorMaterial.mainTextureScale = new Vector2(backgroundTextureTiling, backgroundTextureTiling);
+            return;
+        }
+
+        floorMaterial.color = floorFallbackColor;
+    }
+
+    private bool TryGetBackgroundTexture(out Texture2D texture)
+    {
+        texture = null;
+
+        if (string.IsNullOrWhiteSpace(backgroundTextureName))
+        {
+            return false;
+        }
+
+        texture = Resources.Load<Texture2D>($"Art/Backgrounds/{backgroundTextureName}");
+        if (texture != null)
+        {
+            return true;
+        }
+
+#if UNITY_EDITOR
+        var basePath = $"Assets/Art/Backgrounds/{backgroundTextureName}";
+        var possibleExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".tga", ".tif", ".tiff", ".psd", ".exr", ".hdr" };
+
+        for (var i = 0; i < possibleExtensions.Length; i++)
+        {
+            texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>($"{basePath}{possibleExtensions[i]}");
+            if (texture != null)
+            {
+                return true;
+            }
+        }
+#endif
+
+        return false;
+    }
+
+    private void LoadEnemyTextures()
+    {
+        enemyTextures.Clear();
+        LoadEnemyTexturesFromFolder(enemyTextureFolderName);
+
+        if (enemyTextureFolderName != "Enemy")
+        {
+            LoadEnemyTexturesFromFolder("Enemy");
+        }
+
+        if (enemyTextureFolderName != "Enemies")
+        {
+            LoadEnemyTexturesFromFolder("Enemies");
+        }
+    }
+
+    private void LoadEnemyTexturesFromFolder(string folderName)
+    {
+        if (string.IsNullOrWhiteSpace(folderName))
+        {
+            return;
+        }
+
+        AddUniqueTextures(Resources.LoadAll<Texture2D>($"Art/{folderName}"));
+
+#if UNITY_EDITOR
+        var textureGuids = UnityEditor.AssetDatabase.FindAssets("t:Texture2D", new[] { $"Assets/Art/{folderName}" });
+        for (var i = 0; i < textureGuids.Length; i++)
+        {
+            var texturePath = UnityEditor.AssetDatabase.GUIDToAssetPath(textureGuids[i]);
+            var texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
+            if (texture != null)
+            {
+                AddUniqueTexture(texture);
+            }
+        }
+#endif
+    }
+
+    private void AddUniqueTextures(Texture2D[] textures)
+    {
+        for (var i = 0; i < textures.Length; i++)
+        {
+            AddUniqueTexture(textures[i]);
+        }
+    }
+
+    private void AddUniqueTexture(Texture2D texture)
+    {
+        if (texture == null)
+        {
+            return;
+        }
+
+        for (var i = 0; i < enemyTextures.Count; i++)
+        {
+            if (enemyTextures[i] == texture)
+            {
+                return;
+            }
+        }
+
+        enemyTextures.Add(texture);
     }
 
     private void CreateBoundaryWall(string wallName, Vector3 position, Vector3 scale)
@@ -335,22 +458,32 @@ public sealed class AvoidThemGame : MonoBehaviour
 
     private bool TryGetPointerScreenPosition(out Vector2 pointerPosition)
     {
+        var pointer = Pointer.current;
+        if (pointer != null)
+        {
+            pointerPosition = pointer.position.ReadValue();
+            lastPointerPosition = pointerPosition;
+            return true;
+        }
+
         var mouse = Mouse.current;
         if (mouse != null)
         {
             pointerPosition = mouse.position.ReadValue();
+            lastPointerPosition = pointerPosition;
             return true;
         }
 
         var touchscreen = Touchscreen.current;
-        if (touchscreen != null && touchscreen.primaryTouch.press.isPressed)
+        if (touchscreen != null)
         {
             pointerPosition = touchscreen.primaryTouch.position.ReadValue();
+            lastPointerPosition = pointerPosition;
             return true;
         }
 
-        pointerPosition = default;
-        return false;
+        pointerPosition = lastPointerPosition;
+        return true;
     }
 
     private bool IsStartPressedThisFrame()
@@ -371,6 +504,12 @@ public sealed class AvoidThemGame : MonoBehaviour
 
     private bool WasPrimaryPointerPressedThisFrame()
     {
+        var pointer = Pointer.current;
+        if (pointer != null && pointer.press.wasPressedThisFrame)
+        {
+            return true;
+        }
+
         var mouse = Mouse.current;
         if (mouse != null && mouse.leftButton.wasPressedThisFrame)
         {
@@ -460,7 +599,7 @@ public sealed class AvoidThemGame : MonoBehaviour
         hazardObject.name = "Hazard";
         hazardObject.transform.position = position;
         hazardObject.transform.localScale = Vector3.one * (hazardRadius * 2f);
-        hazardObject.GetComponent<Renderer>().material.color = new Color(1f, 0.31f, 0.2f);
+        ApplyHazardVisuals(hazardObject.GetComponent<Renderer>());
 
         var collider = hazardObject.GetComponent<SphereCollider>();
         collider.sharedMaterial = bounceMaterial;
@@ -477,6 +616,20 @@ public sealed class AvoidThemGame : MonoBehaviour
         rb.linearVelocity = direction.normalized * Mathf.Max(2.5f, speed);
 
         hazards.Add(rb);
+    }
+
+    private void ApplyHazardVisuals(Renderer hazardRenderer)
+    {
+        var hazardMaterial = hazardRenderer.material;
+        if (enemyTextures.Count == 0)
+        {
+            hazardMaterial.color = hazardFallbackColor;
+            return;
+        }
+
+        var texture = enemyTextures[Random.Range(0, enemyTextures.Count)];
+        hazardMaterial.color = Color.white;
+        hazardMaterial.mainTexture = texture;
     }
 
     private void PurgeDestroyedHazards()

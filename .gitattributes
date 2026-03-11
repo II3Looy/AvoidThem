@@ -8,3 +8,13 @@ Assets/Art/Backgrounds/**/*.png filter=lfs diff=lfs merge=lfs -text
 Assets/Art/Backgrounds/**/*.webp filter=lfs diff=lfs merge=lfs -text
 Assets/Art/Backgrounds/**/*.psd filter=lfs diff=lfs merge=lfs -text
 Assets/Art/Backgrounds/**/*.exr filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.jpg filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.jpeg filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.tga filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.tif filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.tiff filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.hdr filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.png filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.webp filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.psd filter=lfs diff=lfs merge=lfs -text
+Assets/Art/Enemies/**/*.exr filter=lfs diff=lfs merge=lfs -text
