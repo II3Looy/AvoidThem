@@ -51,11 +51,13 @@ public sealed class AvoidThemGame : MonoBehaviour
     private float spawnTimer;
     private Plane cursorPlane;
     private Font uiFont;
+    private Vector2 lastPointerPosition;
 
     private void Awake()
     {
         cursorPlane = new Plane(Vector3.up, Vector3.zero);
         uiFont = ResolveFont();
+        lastPointerPosition = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
         LoadEnemyTextures();
         ConfigureCamera();
         BuildArena();
@@ -456,22 +458,32 @@ public sealed class AvoidThemGame : MonoBehaviour
 
     private bool TryGetPointerScreenPosition(out Vector2 pointerPosition)
     {
+        var pointer = Pointer.current;
+        if (pointer != null)
+        {
+            pointerPosition = pointer.position.ReadValue();
+            lastPointerPosition = pointerPosition;
+            return true;
+        }
+
         var mouse = Mouse.current;
         if (mouse != null)
         {
             pointerPosition = mouse.position.ReadValue();
+            lastPointerPosition = pointerPosition;
             return true;
         }
 
         var touchscreen = Touchscreen.current;
-        if (touchscreen != null && touchscreen.primaryTouch.press.isPressed)
+        if (touchscreen != null)
         {
             pointerPosition = touchscreen.primaryTouch.position.ReadValue();
+            lastPointerPosition = pointerPosition;
             return true;
         }
 
-        pointerPosition = default;
-        return false;
+        pointerPosition = lastPointerPosition;
+        return true;
     }
 
     private bool IsStartPressedThisFrame()
@@ -492,6 +504,12 @@ public sealed class AvoidThemGame : MonoBehaviour
 
     private bool WasPrimaryPointerPressedThisFrame()
     {
+        var pointer = Pointer.current;
+        if (pointer != null && pointer.press.wasPressedThisFrame)
+        {
+            return true;
+        }
+
         var mouse = Mouse.current;
         if (mouse != null && mouse.leftButton.wasPressedThisFrame)
         {
