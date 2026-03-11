@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 public sealed class AvoidThemGame : MonoBehaviour
@@ -301,7 +302,12 @@ public sealed class AvoidThemGame : MonoBehaviour
             return;
         }
 
-        var ray = gameCamera.ScreenPointToRay(Input.mousePosition);
+        if (!TryGetPointerScreenPosition(out var pointerPosition))
+        {
+            return;
+        }
+
+        var ray = gameCamera.ScreenPointToRay(pointerPosition);
         if (!cursorPlane.Raycast(ray, out var rayDistance))
         {
             return;
@@ -315,16 +321,64 @@ public sealed class AvoidThemGame : MonoBehaviour
 
     private void HandleMenuInput()
     {
-        if (state == GameState.StartScreen && (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+        if (state == GameState.StartScreen && IsStartPressedThisFrame())
         {
             StartRound();
             return;
         }
 
-        if (state == GameState.GameOver && (Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0)))
+        if (state == GameState.GameOver && IsRestartPressedThisFrame())
         {
             StartRound();
         }
+    }
+
+    private bool TryGetPointerScreenPosition(out Vector2 pointerPosition)
+    {
+        var mouse = Mouse.current;
+        if (mouse != null)
+        {
+            pointerPosition = mouse.position.ReadValue();
+            return true;
+        }
+
+        var touchscreen = Touchscreen.current;
+        if (touchscreen != null && touchscreen.primaryTouch.press.isPressed)
+        {
+            pointerPosition = touchscreen.primaryTouch.position.ReadValue();
+            return true;
+        }
+
+        pointerPosition = default;
+        return false;
+    }
+
+    private bool IsStartPressedThisFrame()
+    {
+        return IsKeyPressedThisFrame(Key.Space) || WasPrimaryPointerPressedThisFrame();
+    }
+
+    private bool IsRestartPressedThisFrame()
+    {
+        return IsKeyPressedThisFrame(Key.R) || IsKeyPressedThisFrame(Key.Space) || WasPrimaryPointerPressedThisFrame();
+    }
+
+    private bool IsKeyPressedThisFrame(Key key)
+    {
+        var keyboard = Keyboard.current;
+        return keyboard != null && keyboard[key].wasPressedThisFrame;
+    }
+
+    private bool WasPrimaryPointerPressedThisFrame()
+    {
+        var mouse = Mouse.current;
+        if (mouse != null && mouse.leftButton.wasPressedThisFrame)
+        {
+            return true;
+        }
+
+        var touchscreen = Touchscreen.current;
+        return touchscreen != null && touchscreen.primaryTouch.press.wasPressedThisFrame;
     }
 
     private void EnterStartScreen()
