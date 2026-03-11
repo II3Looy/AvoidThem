@@ -29,6 +29,11 @@ public sealed class AvoidThemGame : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Vector2 referenceResolution = new Vector2(1920f, 1080f);
 
+    [Header("Visuals")]
+    [SerializeField] private string backgroundTextureName = "lava";
+    [SerializeField] private float backgroundTextureTiling = 2f;
+    [SerializeField] private Color floorFallbackColor = new Color(0.12f, 0.16f, 0.2f);
+
     private readonly List<Rigidbody> hazards = new List<Rigidbody>();
     private Camera gameCamera;
     private Transform cursorTransform;
@@ -121,7 +126,7 @@ public sealed class AvoidThemGame : MonoBehaviour
         floor.transform.position = Vector3.zero;
         floor.transform.localScale = new Vector3(arenaHalfSize / 5f, 1f, arenaHalfSize / 5f);
         var floorRenderer = floor.GetComponent<Renderer>();
-        floorRenderer.material.color = new Color(0.12f, 0.16f, 0.2f);
+        ApplyFloorVisuals(floorRenderer);
         var floorCollider = floor.GetComponent<Collider>();
         if (floorCollider != null)
         {
@@ -139,6 +144,52 @@ public sealed class AvoidThemGame : MonoBehaviour
             directionalLight.intensity = 1.25f;
             directionalLight.transform.rotation = Quaternion.Euler(60f, -30f, 0f);
         }
+    }
+
+    private void ApplyFloorVisuals(Renderer floorRenderer)
+    {
+        var floorMaterial = floorRenderer.material;
+        if (TryGetBackgroundTexture(out var backgroundTexture))
+        {
+            floorMaterial.color = Color.white;
+            floorMaterial.mainTexture = backgroundTexture;
+            floorMaterial.mainTextureScale = new Vector2(backgroundTextureTiling, backgroundTextureTiling);
+            return;
+        }
+
+        floorMaterial.color = floorFallbackColor;
+    }
+
+    private bool TryGetBackgroundTexture(out Texture2D texture)
+    {
+        texture = null;
+
+        if (string.IsNullOrWhiteSpace(backgroundTextureName))
+        {
+            return false;
+        }
+
+        texture = Resources.Load<Texture2D>($"Art/Backgrounds/{backgroundTextureName}");
+        if (texture != null)
+        {
+            return true;
+        }
+
+#if UNITY_EDITOR
+        var basePath = $"Assets/Art/Backgrounds/{backgroundTextureName}";
+        var possibleExtensions = new[] { ".png", ".jpg", ".jpeg", ".webp", ".tga", ".tif", ".tiff", ".psd", ".exr", ".hdr" };
+
+        for (var i = 0; i < possibleExtensions.Length; i++)
+        {
+            texture = UnityEditor.AssetDatabase.LoadAssetAtPath<Texture2D>($"{basePath}{possibleExtensions[i]}");
+            if (texture != null)
+            {
+                return true;
+            }
+        }
+#endif
+
+        return false;
     }
 
     private void CreateBoundaryWall(string wallName, Vector3 position, Vector3 scale)
